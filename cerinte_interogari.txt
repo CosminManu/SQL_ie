@@ -1,0 +1,150 @@
+UPDATE
+1/(POZA) Sa se schiimbe numele angajatei cu id 102 in 'Manu'.
+2/Sa se actualizeze salariul si id ul sediului angajatilor cu id > 150 la 3000 respectiv 1101.
+update angajati
+set salariul = 3000, id_sedu = 1101
+where id_angajat >= 150;
+
+3/Sa se actualizeze salariul angajatilor cu id-ul 102, 103 si 104 cu cel al angajatului cu id 105.  
+update angajati
+set salariul = (select salariul from angajati where id_angajat = 105)
+where id_angajat in (102, 103, 104);
+
+4/ Sa se actualizeze nr de telefon si numele angajatei Ana Comanescu.
+update angajati
+set telefonn = '0722 025 123', nume = 'Vasilescu'
+where nume = 'Comanescu';
+
+5/Sa se actualizeze data aducerii autovehiculului la 25 martie 2021 in contractul cu id CON01.
+update contracte
+set data_aducerii = to_date('25-03-2021', 'dd-mm-yyyy'), perioada = 10
+where id_contract = 'CON01';
+
+========================
+DELETE
+1/Sa se stearga angajatul cu id 104.
+delete from angajati
+where id_angajat = '104';
+
+2/Sa se stearga toate contractele cu masini inchiriate inainte de 01 sept 2020.
+delete from contracte 
+where data_preluarii < to_date('01-09-2020', 'dd-mm-yyyy');
+
+3/Sa se stearga toti angajatii din sediile cu id ul 1101 si 1102.
+delete from angajati 
+where id_sediu in (1101, 1102);
+========================
+Interogari min 15 (4 capturi + 1 manu)
+
+1/Sa se afiseze id ul sediului unde sunt cel putin 3 masini.
+select s.id_sediu, count(m.id_masina) as nr_masini
+from sedii s, masini m
+where s.id_sediu = m.id_sediu
+group by s.id_sediu
+having count(m.id_masina) >= 3;
+
+2/Sa se afiseze cate masini sunt la fiecare sediu
+select s.id_sediu, count(m.id_masina) as nr_masini
+from sedii s, masini m
+where s.id_sediu = m.id_sediu
+group by s.id_sediu;
+
+3/(POZA)  Sa se afiseze cate masini au fost inchiriate  
+select count(id_masina) as nr_masini_inchiriate
+from masini
+where id_sediu is null;
+
+4/Sa se selecteze contractul cu cel mai mare pret.
+select id_contract, pret
+from contracte 
+where pret =(select max(pret)
+from contracte);
+
+5/Sa se afiseze valoarea totala a contractelor semnate.
+select sum(pret * cantitate) as valoare_totala
+from contracte;
+
+6/Sa se afiseze valoarea totala a contractelor al caror id masina este mai mic decat 707.
+-- select sum(c.pret * c.cantitate) as valoare_totala, m.id_masina
+from contracte c, masini m 
+where c.id_masina = m.id_masina and m.id_masina < 707
+group by m.id_masina;
+-- select sum(c.pret * c.cantitate) as valoare_totala
+from contracte c, masini m 
+where c.id_masina = m.id_masina and m.id_masina < 707;
+
+7/(POZA) Sa se afiseze valoarea contractelor semnate in anul curent si in anul anterior.	
+select sum(pret * cantitate) as valoare, extract(year from sysdate) as an_curent
+from contracte
+where extract(year from data_preluarii) = extract(year from sysdate)
+union
+select sum(pret * cantitate) as valoare, extract(year from sysdate) - 1 as an_anterior
+from contracte
+where extract(year from data_preluarii) = extract(year from sysdate) - 1;
+
+8/(POZA)  Sa se mareasca cu 8% salariul angajatilor ce lucreaza la sediul din Otopeni.
+update angajati
+set salariul = 1.08 * salariul
+where id_sediu = (select id_sediu from sedii where oras = 'Otopeni');
+
+9/Sa se afiseze marca, tipul, statusul si id ul sediului al masinilor impreuna cu denumirea completa a transmisiei lor. (transmisia e char(1): A/M)
+select marca, tip, status, id_sediu,transmisie,
+case transmisie when 'M' then 'Manuala'
+                when 'A' then 'Automata'
+                else 'Fara transmisie'
+end as "transmisie"
+from masini;
+
+10/Sa se afiseze toti clientii nascuti inaite de 1980.
+select * 
+from clienti
+where extract(year from data_nastere) < 1980;
+
+11/(POZA) Sa se afiseze numele, prenumele, id-ul, tara de provenienta si valoarea totala de inchiriere pentru clientii care au inchiriat 2 sau mai multe masini.
+select cl.nume_client, cl.prenume_client, cl.id_client, cl.tara_provenienta, sum(c.pret * c.cantitate) as valoare 
+from clienti cl, contracte c
+where cl.id_client = c.id_client
+group by  cl.nume_client, cl.prenume_client, cl.id_client, cl.tara_provenienta
+having count(c.id_client) >= 2;
+
+12/Sa se afiseze pretul si id-ul contractelor semnate pentru masinile cu al doilea tip de asigurare (AM211).
+select c.pret, c.id_contract
+from masini m, contracte c
+where c.id_masina = m.id_masina and m.id_asigurare like 'AM2%'
+group by c.pret, c.id_contract
+order by c.id_contract;
+
+13/Sa se afiseze numele, prenume si tara de provenienta pt clientul ce si a luat al doilea tip de asigurare (AM330)
+select cl.nume_client, cl.prenume_client, cl.tara_provenienta
+from masini m, contracte c, clienti cl
+where m.id_masina = c.id_masina and c.id_client = cl.id_client and m.id_asigurare like 'AM3%'
+group by cl.nume_client, cl.prenume_client, cl.tara_provenienta
+order by cl.nume_client;
+
+14/Sa se afiseze marca masinilor cu si fara sediu.
+select m.marca
+from masini m join sedii s on m.id_sediu=s.id_sediu(+);
+
+15/Sa se afiseze id-ul si adresa sediilor care au inregistrat pierderi.
+select s.id_sediu, s.adresa, s.oras
+from sedii s, evidente_contabile e
+where s.id_sediu = e.id_sediu and e.sold_final < 0;
+
+16/Sa se afiseze media cheltuielilor si a veniturilor de la cele 5 sedii.
+select avg(venituri) as medie_venituri, avg(cheltuieli) as medie_cheltuieli
+from evidente_contabile;
+
+17/Sa se afle media salariilor angajatilor care au venit de la jumatea anului trecut si pana la data curenta.
+select round(avg(salariul),2) as media_salarii
+from angajati
+where data_angajare between to_date('01-05-2020', 'dd-mm-yyyy') and to_date(sysdate, 'dd-mm-yyyy');
+
+18/Sa se afle media salariilor angajatilor care lucreaza pe bd. Theodor Pallady.
+select round(avg(a.salariul),2) as media_salarii, s.id_sediu,s.adresa
+from angajati a, sedii s
+where a.id_sediu = s.id_sediu and s.adresa like '%Pallady%'
+group by s.id_sediu, s.adresa;
+
+19/ Sa se creeze un index la coloana salarii din tabela Angajati.
+create index sal_ind
+on angajati (salarii);
